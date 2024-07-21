@@ -1,0 +1,102 @@
+{
+    "realm": "development",
+    "displayName": "Development",
+    "displayNameHtml": "Development",
+    "enabled": true,
+    "internationalizationEnabled": true,
+    "supportedLocales": [
+        "en",
+        "es"
+    ],
+    "defaultLocale": "es",
+    "sslRequired": "external",
+    "registrationAllowed": true,
+    "registrationEmailAsUsername": true,
+    "rememberMe": true,
+    "verifyEmail": true,
+    "loginWithEmailAllowed": true,
+    "duplicateEmailsAllowed": false,
+    "resetPasswordAllowed": true,
+    "editUsernameAllowed": true,
+    "bruteForceProtected": true,
+    "permanentLockout": false,
+    "bruteForceStrategy": "MULTIPLE",
+    "roles": {
+        "realm": [
+            {
+                "name": "admin",
+                "description": "Administrator"
+            },
+            {
+                "name": "user",
+                "description": "User"
+            }
+        ]
+    },
+    "clients": [
+        {
+            "clientId": "laravel-app",
+            "name": "Laravel Application",
+            "enabled": true,
+            "protocol": "openid-connect",
+            "publicClient": false,
+            "standardFlowEnabled": true,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": false,
+            "defaultRoles": [
+                "user"
+            ]
+        }
+    ],
+    "groups": [
+        {
+            "name": "demo",
+            "path": "/demo",
+            "subGroups": []
+        }
+    ],
+    "users": [
+        {
+            "username": "admin@example.org",
+            "enabled": true,
+            "totp": false,
+            "emailVerified": true,
+            "firstName": "Admin",
+            "lastName": "User",
+            "email": "admin@example.com",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "password",
+                    "temporary": false
+                }
+            ],
+            "groups": [
+                "demo"
+            ]
+        },
+        {
+            "username": "user@example.org",
+            "enabled": true,
+            "totp": false,
+            "emailVerified": true,
+            "firstName": "Normal",
+            "lastName": "User",
+            "email": "user@example.org",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "password",
+                    "temporary": false
+                }
+            ],
+            "groups": [
+                "demo"
+            ]
+        }
+    ],
+    "requiredCredentials": [
+        "password"
+    ]
+}

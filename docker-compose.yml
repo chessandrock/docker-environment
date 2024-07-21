@@ -1,0 +1,263 @@
+name: development
+
+volumes:
+    keycloak:
+    keycloak_postgres:
+    mail:
+    mariadb:
+    memcached:
+    minio:
+    mongodb_config:
+    mongodb_data:
+    postgresql:
+    redis:
+    osm_data:
+    osm_tiles:
+
+networks:
+    default:
+        name: development
+
+services:
+    syslog:
+        image: pbertera/syslogserver
+        container_name: syslog
+        restart: unless-stopped
+        networks:
+            - default
+        hostname: syslog
+        ports:
+            - 514:514/udp
+            - 514:514/tcp
+            - 20001:80/tcp
+        environment:
+            SYSLOG_USERNAME: syslog
+            SYSLOG_PASSWORD: syslog
+    keycloak_postgres:
+        image: postgres:17-alpine
+        container_name: keycloak_postgres
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "pg_isready", "-q", "-d", "postgres", "-U", "postgres" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
+        volumes:
+            - ./keycloak/postgres/init:/docker-entrypoint-initdb.d
+            - keycloak_postgres:/var/lib/postgresql/data
+        networks:
+            - default
+        hostname: keycloak_postgres
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: postgres
+            POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale-provider=icu --icu-locale=en --lc-collate=en_US.UTF-8 --lc-ctype=en_US.UTF-8 --lc-messages=en_US.UTF-8 --lc-monetary=en_US.UTF-8 --lc-numeric=en_US.UTF-8 --lc-time=en_US.UTF-8"
+    keycloak:
+        image: bitnami/keycloak:latest
+        container_name: keycloak
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "curl", "-f", "http://localhost:20002/auth/realms/master" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
+        depends_on:
+            keycloak_postgres:
+                condition: service_healthy
+        volumes:
+            - keycloak:/bitnami/keycloak
+            - ./keycloak/realm.json:/opt/bitnami/keycloak/data/import/keycloak.default.realm.json
+        networks:
+            - default
+        hostname: keycloak
+        ports:
+            - 20002:20002/tcp
+            - 20003:20003/tcp
+        environment:
+            KC_HTTP_ENABLED: true
+            KEYCLOAK_ADMIN: admin
+            KEYCLOAK_ADMIN_PASSWORD: admin
+            KEYCLOAK_HTTP_PORT: 20002
+            KEYCLOAK_HTTPS_PORT: 20003
+            KEYCLOAK_DATABASE_VENDOR: postgresql
+            KEYCLOAK_DATABASE_HOST: keycloak_postgres
+            KEYCLOAK_DATABASE_PORT: 5432
+            KEYCLOAK_DATABASE_NAME: keycloak
+            KEYCLOAK_DATABASE_USER: keycloak
+            KEYCLOAK_DATABASE_PASSWORD: keycloak
+            KEYCLOAK_DATABASE_SCHEMA: public
+            KEYCLOAK_ENABLE_STATISTICS: true
+            KEYCLOAK_ENABLE_HEALTH_ENDPOINTS: true
+            KEYCLOAK_PRODUCTION: false
+            KEYCLOAK_EXTRA_ARGS: "--import-realm"
+    mail:
+        image: mailhog/mailhog:latest
+        container_name: mail
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "curl", "-f", "http://localhost:20004/api/v2/health" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
+        volumes:
+            - mail:/data
+        networks:
+            - default
+        hostname: mail
+        ports:
+            - 25:1025
+            - 20004:8025
+    minio:
+        image: minio/minio
+        container_name: minio
+        command: server /data --address ":20005" --console-address ":20006"
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "curl", "-f", "http://localhost:20005/minio/health/ready" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
+        volumes:
+            - minio:/data
+        networks:
+            - default
+        hostname: minio
+        ports:
+            - 20005:20005
+            - 20006:20006
+        environment:
+            MINIO_ROOT_USER: administrator
+            MINIO_ROOT_PASSWORD: administrator
+    memcached:
+        image: memcached:alpine
+        container_name: memcached
+        command: memcached -m 64
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "nc", "-z", "localhost", "11211" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
+        volumes:
+            - memcached:/var/lib/memcached/data
+        networks:
+            - default
+        hostname: memcached
+        ports:
+            - 11211:11211
+    redis:
+        image: redis:alpine
+        container_name: redis
+        command: redis-server --save 60 1 --loglevel warning
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "redis-cli", "ping" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
+        volumes:
+            - redis:/data
+        networks:
+            - default
+        hostname: redis
+        ports:
+            - 6379:6379
+    postgresql:
+        image: postgres:17-alpine
+        container_name: postgresql
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "pg_isready", "-q", "-d", "postgres", "-U", "postgres" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
+        volumes:
+            - ./postgres/init:/docker-entrypoint-initdb.d
+            - postgresql:/var/lib/postgresql/data
+        networks:
+            - default
+        hostname: postgresql
+        ports:
+            - 5432:5432
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale-provider=icu --icu-locale=es --lc-collate=es_ES.UTF-8 --lc-ctype=es_ES.UTF-8 --lc-messages=es_ES.UTF-8 --lc-monetary=es_ES.UTF-8 --lc-numeric=es_ES.UTF-8 --lc-time=es_ES.UTF-8"
+    mariadb:
+        image: mariadb:latest
+        container_name: mariadb
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
+        volumes:
+            - ./mariadb/conf:/etc/mysql/conf.d
+            - ./mariadb/init:/docker-entrypoint-initdb.d
+            - mariadb:/var/lib/mysql
+        networks:
+            - default
+        hostname: mariadb
+        ports:
+            - 3306:3306
+        environment:
+            MARIADB_AUTO_UPGRADE: true
+            MARIADB_ROOT_PASSWORD: root
+    mongodb:
+        image: mongo:latest
+        container_name: mongodb
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
+        volumes:
+            - mongodb_config:/data/configdb
+            - mongodb_data:/data/db
+        networks:
+            - default
+        hostname: mongodb
+        ports:
+            - 27017:27017
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: mongodb
+            MONGO_INITDB_ROOT_PASSWORD: mongodb
+    osm:
+        build: ./osm
+        container_name: osm
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "curl", "-f", "http://localhost/" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 60s
+        volumes:
+            - osm_data:/data/database
+            - osm_tiles:/data/tiles
+            - ./osm/chile-latest.osm.pbf:/data/region.osm.pbf
+        networks:
+            - default
+        hostname: osm
+        ports:
+            - 20007:80
+        environment:
+            - ALLOW_CORS=true
+        #    - DOWNLOAD_PBF=https://download.geofabrik.de/south-america/chile-latest.osm.pbf
+        #    - DOWNLOAD_POLY=https://download.geofabrik.de/south-america/chile.poly
+        #    - MAX_INTERVAL_SECONDS=86400
+        #    - REPLICATION_URL=https://planet.openstreetmap.org/replication/day/
+        #    - UPDATES=enabled
+        command: run
